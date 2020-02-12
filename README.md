@@ -17,11 +17,39 @@ Tested on a mac OS 10.13.6, SBT from homebrew, python3 from pyenv.
 Folder [demo](./demo) contains shell scripts with names starting with numbers. These can be run
 in order to demonstrate the application using local kafka server. Some (most) scripts run the apps in foreground and
  should be run in their own terminal sessions.
+ 
+```shell script
+cd demo
+./01-get-kafka.sh
+# ...
+./05-start-service.sh
+# open new terminal window
+# ...
+```
 
 These scripts push provided example models and generated examples to respective kafka topics.
 
 Output of the application is written to two kafka topics, "predictions" and "statistics" and can be seen in respective
 consumers.
+
+## Design decisions for requirements
+
+> At any point in time over its life cycle, the predictor should be able to make predictions, i.e. have a model available.
+ 
+Predictor starts without a model, but listens on a kafka stream of models from the beginning.
+ Before it reads a model from the stream it won't start serving predictions.
+It tries to start with the latest model from the stream (implementation is a bit naive now).
+
+> Furthermore, it should be able to switch to using an updated model without being restarted.
+> To accomplish this, the predictor is listening on a second stream consisting of machine learning models. 
+> As soon as a new model is available in the models stream, the component should stop predicting, switch over
+> to the new model and then resume predicting using the new model
+
+Switchover happens in a synchronized block. As soon as a model is available, the block is entered and the current
+model cannot be retrieved until it's replaced.
+
+Predictions happen in a separate thread, it will finish predicting with the current model and then wait until the 
+newer one is loaded.
 
 ## Assumptions
 

@@ -3,7 +3,7 @@ import json
 import random
 import time
 
-for i in range(1, 100):
+for i in range(1, 1000):
     features = {
         'x' + str(k): random.random() * 200 - 100 for k in range(1,6)
     }
