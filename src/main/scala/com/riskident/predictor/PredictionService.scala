@@ -3,20 +3,19 @@ package com.riskident.predictor
 import java.util
 import java.util.Properties
 
+import com.riskident.predictor.PredictorJsonProtocol._
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.errors.WakeupException
-
-import scala.util.Random
-import collection.JavaConverters._
-import PredictorJsonProtocol._
-import org.apache.kafka.common.protocol.types.Field.UUID
 import spray.json._
+
+import scala.collection.JavaConverters._
 
 object PredictionService {
   def main(args: Array[String]): Unit = {
     val classifierProvider = new BlockingClassifierProvider()
     val resultWriter = new ResultWriter()
-    val metricsCalculator = new ModelMetricsCalculator()
+    val metricsCalculator = new ModelMetricsCalculator(10, 50)
+
     val predictionProcessor: PredictionProcessor = new PredictionProcessor(
       classifierProvider,
       Seq(resultWriter, metricsCalculator)
@@ -59,8 +58,9 @@ object PredictionService {
         val props: Properties = commonConsumerProperties
         // we want every consumer get the entire models topic
         props.put("group.id", "predictor-models-" + util.UUID.randomUUID().toString)
-        // start from the newest model
-        props.put("auto.offset.reset", "latest")
+        // ideally we would like to not consume all models, but auto.offset.reset
+        // property allows us to either start from oldest, or right after newest record in the topic.
+        props.put("auto.offset.reset", "earliest")
         val consumer = new KafkaConsumer[String, String](props)
 
         try {
@@ -68,7 +68,8 @@ object PredictionService {
           println("Start consuming models")
           while (true) {
             val records = consumer.poll(Long.MaxValue).asScala
-            records.foreach(r => {
+            // always skip to latest model in the batch
+            records.lastOption.foreach(r => {
               val modelAsString = r.value()
               println("New model: " + modelAsString)
               classifierProvider.update(modelAsString)

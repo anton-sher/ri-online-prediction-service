@@ -22,10 +22,15 @@ package object predictor {
                                actualLabel: Double
                              )
 
+  case class StatisticsRecord(
+                             accuracy: Double
+                             )
+
   object PredictorJsonProtocol extends DefaultJsonProtocol {
     implicit val exampleFormat = jsonFormat3(Example)
     implicit val predictionFormat = jsonFormat2(Prediction)
     implicit val predictionResultFormat = jsonFormat4(PredictionResult)
+    implicit val statisticsFormat = jsonFormat1(StatisticsRecord)
   }
 
   trait Classifier {
