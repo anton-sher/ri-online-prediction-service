@@ -1,5 +1,7 @@
 package com.riskident
 
+import spray.json.DefaultJsonProtocol
+
 package object predictor {
 
   case class Example(
@@ -19,6 +21,12 @@ package object predictor {
                                prediction: Prediction,
                                actualLabel: Double
                              )
+
+  object PredictorJsonProtocol extends DefaultJsonProtocol {
+    implicit val exampleFormat = jsonFormat3(Example)
+    implicit val predictionFormat = jsonFormat2(Prediction)
+    implicit val predictionResultFormat = jsonFormat4(PredictionResult)
+  }
 
   trait Classifier {
     def predict(example: Example): Prediction
